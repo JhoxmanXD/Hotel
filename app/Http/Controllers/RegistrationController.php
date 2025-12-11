@@ -71,4 +71,22 @@ class RegistrationController extends Controller
             ->route('registrations.index')
             ->with('success','Registro de hospedaje eliminado.');
     }
+    public function calculateTotal($id)
+    {
+        $registration = \App\Models\Registration::with('room')->findOrFail($id);
+        
+        // Usamos Carbon para manejar fechas
+        $checkin = \Carbon\Carbon::parse($registration->checkin_date);
+        // Si no ha salido, cobramos hasta hoy. Si ya salió, usamos la fecha de salida.
+        $checkout = $registration->checkout_date ? \Carbon\Carbon::parse($registration->checkout_date) : \Carbon\Carbon::now();
+        
+        // Calcular días (Mínimo 1 día si entró y sale hoy mismo)
+        $days = $checkin->diffInDays($checkout) ?: 1;
+        
+        // Calcular total
+        $total = $days * $registration->room->price; // Asegúrate que tu modelo Room tenga columna 'price'
+        
+        return response()->json(['total' => $total]);
+    }
+    
 }
