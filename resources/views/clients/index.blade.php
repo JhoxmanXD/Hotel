@@ -38,7 +38,12 @@
                         data-toggle="toggle" data-on="Activo" data-off="Inactivo" {{ $client->estado ? 'checked':'' }}>
                     </td>
                     <td>{{$client->registeredBy}}</td>
+            
                     <td>
+                        {{-- 2. BOTÓN DE EDITAR --}}
+                                <a href="{{ route('registrations.edit', $reg) }}" class="btn btn-info btn-sm" title="Editar">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </a>
                         <form class="d-inline delete-form" action="{{ route('clients.destroy', $client) }}"  method="POST">
                             @csrf
                             @method('DELETE')
