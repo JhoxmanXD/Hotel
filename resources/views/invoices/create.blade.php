@@ -22,7 +22,7 @@
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label>Registro (Reserva) <span class="text-danger">*</span></label>
-                                            <select name="registration_id" class="form-control @error('registration_id') is-invalid @enderror" required>
+                                            <select name="registration_id" id="registration_id" class="form-control @error('registration_id') is-invalid @enderror" required>
                                                 <option value="">-- Seleccione --</option>
                                                 @foreach($registrations as $reg)
                                                     <option value="{{ $reg->id }}" {{ old('registration_id') == $reg->id ? 'selected' : '' }}>
@@ -66,9 +66,9 @@
                                     <div class="col-md-4">
                                         <div class="form-group">
                                             <label>Total <span class="text-danger">*</span></label>
-                                            <input type="number" step="0.01" min="0" name="total"
+                                            <input type="number" step="0.01" min="0" name="total" id="total"
                                                    class="form-control @error('total') is-invalid @enderror"
-                                                   value="{{ old('total') }}" required autocomplete="off">
+                                                   value="{{ old('total') }}" required autocomplete="off" readonly>
                                             @error('total') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                         </div>
                                     </div>
@@ -92,10 +92,41 @@
                                 <a href="{{ route('invoices.index') }}" class="btn btn-outline-secondary">Cancelar</a>
                             </div>
                         </form>
-                    </div> <!-- card -->
-                </div>
+                    </div> </div>
             </div>
         </div>
     </section>
 </div>
+
+@push('scripts')
+<script>
+    $(document).ready(function() {
+        // Cuando cambian la Reserva seleccionada
+        $('#registration_id').change(function() {
+            var registrationId = $(this).val();
+            
+            if(registrationId) {
+                // (Opcional) Mostrar que está calculando
+                $('#total').attr('placeholder', 'Calculando...');
+
+                $.ajax({
+                    url: '/registration/' + registrationId + '/calculate',
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        // Poner el precio en el campo Total
+                        $('#total').val(data.total);
+                    },
+                    error: function() {
+                        alert('Error al calcular el precio. Asegúrate de haber creado la ruta y el controlador.');
+                    }
+                });
+            } else {
+                $('#total').val('');
+            }
+        });
+    });
+</script>
+@endpush
+
 @endsection
