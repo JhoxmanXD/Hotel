@@ -33,7 +33,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('cambioestadoregistrations', [RegistrationController::class, 'cambioestadoregistrations'])->name('cambioestadoregistrations');
     Route::resource('invoices', InvoiceController::class);
     Route::get('cambioestadoinvoices', [InvoiceController::class, 'cambioestadoinvoices'])->name('cambioestadoinvoices');
-
+    Route::get('/registration/{id}/calculate', [App\Http\Controllers\RegistrationController::class, 'calculateTotal']);
+    
 });
 
 
