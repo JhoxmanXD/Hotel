@@ -7,11 +7,13 @@ use App\Models\Registration;
 use App\Models\Employee;
 use App\Models\Room;
 use App\Models\Client;
+use Carbon\Carbon; // <--- Agregamos esto para usar fechas más fácil
 
 class RegistrationController extends Controller
 {
     public function index()
     {
+        // Ordenamos por los más recientes primero
         $registrations = Registration::with(['client','room','employee'])
             ->latest()
             ->paginate(15);
@@ -31,6 +33,14 @@ class RegistrationController extends Controller
     public function store(RegistrationRequest $request)
     {
         $data = $request->validated();
+        
+        // Aseguramos que al crear, checkout sea null si no se envía
+        // (Aunque la base de datos ya lo permite, esto es buena práctica)
+        if (!isset($data['checkoutdate'])) {
+            $data['checkoutdate'] = null;
+            $data['checkouttime'] = null;
+        }
+
         Registration::create($data);
 
         return redirect()
@@ -71,25 +81,29 @@ class RegistrationController extends Controller
             ->route('registrations.index')
             ->with('success','Registro de hospedaje eliminado.');
     }
-    // Función para cobrar y dar salida
+
+    // --- FUNCIONES DE LÓGICA DE NEGOCIO ---
+
+    // Función para cobrar y dar salida (Checkout)
     public function checkout($id)
     {
-        // 1. Buscamos el registro junto con la habitación (para saber el precio)
-        $registration = \App\Models\Registration::with('room')->findOrFail($id);
+        // 1. Buscamos el registro junto con la habitación
+        $registration = Registration::with('room')->findOrFail($id);
 
         // 2. Capturamos el momento exacto de AHORA
-        $now = \Carbon\Carbon::now();
+        $now = Carbon::now();
 
         // 3. Guardamos la FECHA y la HORA de salida
-        // Usamos toDateString() para que guarde solo '2025-12-11'
-        // Usamos toTimeString() para que guarde solo '08:30:00'
         $registration->checkoutdate = $now->toDateString(); 
         $registration->checkouttime = $now->toTimeString(); 
 
-        // 4. Calcular cuántos días se quedó
-        $checkin = \Carbon\Carbon::parse($registration->checkindate);
+        // 4. Cambiamos el estado a Inactivo (0) para cerrar el ciclo
+        // Asumiendo que en tu tabla tienes una columna 'state' o 'status'
+        $registration->state = '0'; 
+
+        // 5. Calcular cuántos días se quedó
+        $checkin = Carbon::parse($registration->checkindate);
         
-        // Calculamos la diferencia en días entre la entrada y hoy
         $days = $checkin->diffInDays($now);
         
         // Si la diferencia es 0 (entró y salió el mismo día), cobramos 1 día
@@ -97,26 +111,34 @@ class RegistrationController extends Controller
             $days = 1;
         }
 
-        // 5. Calcular el Total $$ (Días * Precio de la Habitación)
+        // 6. Calcular el Total
         $total = $days * $registration->room->price;
         
-        // 6. Guardar los cambios en la base de datos
+        // 7. Guardar cambios
         $registration->save();
 
-        // 7. Redirigir avisando cuánto cobrar
         return redirect()->back()->with('success', 'Checkout exitoso. Total a cobrar: $' . number_format($total, 0));
     }
 
+    // Función para calcular total en la Factura (AJAX)
     public function calculateTotal($id)
     {
-        $registration = \App\Models\Registration::with('room')->findOrFail($id);
+        $registration = Registration::with('room')->findOrFail($id);
         
-        $checkin = \Carbon\Carbon::parse($registration->checkindate);
+        $checkin = Carbon::parse($registration->checkindate);
         
-        // CORRECCIÓN: 'checkoutdate'
-        $checkout = $registration->checkoutdate ? \Carbon\Carbon::parse($registration->checkoutdate) : \Carbon\Carbon::now();
+        // Usamos checkoutdate si existe, si no, usamos AHORA
+        $checkout = $registration->checkoutdate 
+                    ? Carbon::parse($registration->checkoutdate) 
+                    : Carbon::now();
         
-        $days = $checkin->diffInDays($checkout) ?: 1;
+        $days = $checkin->diffInDays($checkout);
+        
+        // Mínimo 1 día de cobro
+        if ($days == 0) {
+            $days = 1;
+        }
+
         $total = $days * $registration->room->price;
         
         return response()->json(['total' => $total]);
