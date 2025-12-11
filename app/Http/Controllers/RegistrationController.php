@@ -71,20 +71,39 @@ class RegistrationController extends Controller
             ->route('registrations.index')
             ->with('success','Registro de hospedaje eliminado.');
     }
+    // Función para cobrar y dar salida
+    public function checkout($id)
+    {
+        $registration = \App\Models\Registration::with('room')->findOrFail($id);
+
+        // 1. Marcar salida hoy
+        $checkout = \Carbon\Carbon::now();
+        $registration->checkout_date = $checkout;
+
+        // 2. Calcular días
+        $checkin = \Carbon\Carbon::parse($registration->checkin_date);
+        $days = $checkin->diffInDays($checkout);
+        if ($days == 0) $days = 1; // Cobrar mínimo 1 día
+
+        // 3. Calcular Total
+        $total = $days * $registration->room->price;
+        
+        // Guardamos
+        $registration->save();
+
+        return redirect()->back()->with('success', 'Checkout exitoso. Total a cobrar: $' . number_format($total, 0));
+    }
+
+    // Función para la factura (Invoice)
     public function calculateTotal($id)
     {
         $registration = \App\Models\Registration::with('room')->findOrFail($id);
         
-        // Usamos Carbon para manejar fechas
         $checkin = \Carbon\Carbon::parse($registration->checkin_date);
-        // Si no ha salido, cobramos hasta hoy. Si ya salió, usamos la fecha de salida.
         $checkout = $registration->checkout_date ? \Carbon\Carbon::parse($registration->checkout_date) : \Carbon\Carbon::now();
         
-        // Calcular días (Mínimo 1 día si entró y sale hoy mismo)
         $days = $checkin->diffInDays($checkout) ?: 1;
-        
-        // Calcular total
-        $total = $days * $registration->room->price; // Asegúrate que tu modelo Room tenga columna 'price'
+        $total = $days * $registration->room->price;
         
         return response()->json(['total' => $total]);
     }
