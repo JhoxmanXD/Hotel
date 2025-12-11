@@ -21,10 +21,10 @@
                     <th>Email</th>
                     <th>State</th>
                     <th>Registered By</th>
-                    <th>Acciones</th> </tr>
+                    <th>Acciones</th> 
+                </tr>
             </thead>
             <tbody>
-        
                 @foreach($clients as $client)
                 <tr>
                     <td>{{$client->id}}</td>
@@ -40,10 +40,11 @@
                     <td>{{$client->registeredBy}}</td>
             
                     <td>
-                        {{-- 2. BOTÓN DE EDITAR --}}
-                                <a href="{{ route('registrations.edit', $reg) }}" class="btn btn-info btn-sm" title="Editar">
-                                    <i class="fas fa-pencil-alt"></i>
-                                </a>
+                        {{-- CORRECCIÓN: Apuntar a clients.edit usando la variable $client --}}
+                        <a href="{{ route('clients.edit', $client->id) }}" class="btn btn-info btn-sm" title="Editar">
+                            <i class="fas fa-pencil-alt"></i>
+                        </a>
+
                         <form class="d-inline delete-form" action="{{ route('clients.destroy', $client) }}"  method="POST">
                             @csrf
                             @method('DELETE')
@@ -56,6 +57,6 @@
         
         </table>
     </div>
-    </div>
+</div>
 
 @endsection
