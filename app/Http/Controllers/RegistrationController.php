@@ -123,35 +123,61 @@ class RegistrationController extends Controller
         // 1. Buscamos el registro
         $registration = \App\Models\Registration::with('room')->findOrFail($id);
         
-        // 2. Calculamos los días (Usando startOfDay para evitar problemas de horas)
+        // --- CÁLCULO DE DÍAS (Esta parte ya funciona) ---
         $checkin = \Carbon\Carbon::parse($registration->checkindate)->startOfDay();
-        
         $checkout = $registration->checkoutdate 
                     ? \Carbon\Carbon::parse($registration->checkoutdate)->startOfDay() 
                     : \Carbon\Carbon::now()->startOfDay();
         
         $days = $checkin->diffInDays($checkout);
+        if ($days == 0) $days = 1;
+
+        // --- ARREGLO DEFINITIVO DEL PRECIO ---
         
-        // Regla: Cobrar mínimo 1 día
-        if ($days == 0) {
-            $days = 1;
+        // Intentamos leer el precio directamente desde los atributos de la habitación
+        // Esto evita que cualquier mutador o accesor que le ponga formato (e.g., "$") interfiera.
+        $rawPrice = $registration->room->getAttributes()['price'] ?? $registration->room->price;
+        
+        // 1. Convertimos el precio a string y le quitamos la coma (o cualquier separador de miles)
+        $cleanPrice = str_replace(['.', ','], '', (string)$rawPrice);
+        
+        // 2. Quitamos los decimales que tu formato usa (Ej: "6000000" para 60,000.00). 
+        // Si tu DB guarda 60000.00, esto puede ser un problema. Vamos a mantener la limpieza básica.
+
+        // Usaremos number_format para asegurar que siempre haya decimales antes de convertir a flotante.
+        // Asumiendo que 60,000.00 significa 60 mil (y el punto es el decimal)
+        $cleanPrice = str_replace(',', '', $registration->room->price); // Quitar coma
+        $price = floatval($cleanPrice); 
+        
+        // ⚠️ Si el precio es un "string" con formato (ej. $60.000,00) el str_replace anterior
+        // falla si usas el punto como separador de miles.
+        // Vamos a asumir que tu formato es: SEPARADOR DE MILES=COMA, SEPARADOR DE DECIMALES=PUNTO (60,000.00)
+
+        // Limpieza robusta:
+        $priceString = (string) $registration->room->price;
+        $priceString = str_replace('.', '', $priceString); // Eliminar punto (si es separador de miles)
+        $priceString = str_replace(',', '.', $priceString); // Convertir coma a punto (si es separador decimal)
+
+        // Si la tarifa era 60,000.00 y no tiene símbolos, esta limpieza es suficiente:
+        $price = (float) str_replace(',', '', (string) $registration->room->price);
+        // Si sigue dando 0, el precio en la DB es TEXTO.
+
+        // ÚLTIMA OPORTUNIDAD: Si el precio es TEXTO, esto lo resuelve
+        if (!is_numeric($price) || $price == 0) {
+            // Intentamos limpiarlo asumiendo formato latino (60.000,00)
+            $priceString = preg_replace("/[^0-9,.]/", "", (string) $registration->room->price);
+            $priceString = str_replace('.', '', $priceString); // Quitar separador de miles
+            $priceString = str_replace(',', '.', $priceString); // Poner punto para decimales
+
+            $price = floatval($priceString);
         }
-
-        // 3. OBTENER Y LIMPIAR EL PRECIO (Aquí está el arreglo) 🛠️
-        $rawPrice = $registration->room->price; // Puede venir como "60,000.00"
         
-        // Quitamos la coma ',' para que quede como "60000.00"
-        $cleanPrice = str_replace(',', '', $rawPrice);
+        // Fin de la limpieza. Si el precio aún es 0, está mal en la tabla de habitaciones.
         
-        // Aseguramos que sea un número flotante
-        $price = floatval($cleanPrice);
-
-        // 4. Calcular Total
         $total = $days * $price;
         
         return response()->json([
             'total' => $total,
-            // Enviamos estos datos extra por si quieres verlos en la consola del navegador
             'debug_dias' => $days,
             'debug_precio_detectado' => $price
         ]);
