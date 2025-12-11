@@ -32,20 +32,18 @@
                             <td>{{ $employee->phone }}</td>
                             <td>{{ $employee->email }}</td>
                             <td>
-                                @can('employees.edit')
-                                    {{-- CORREGIDO: Cambié $ciudad->id por $employee->id --}}
-                                    <a href="{{ route('employees.edit', $employee->id) }}" class="btn btn-info btn-sm"
-                                        title="Editar"><i class="fas fa-pencil-alt"></i></a>
-                                @endcan
-                                @can('employees.destroy')
-                                    <form class="d-inline delete-form" action="{{ route('employees.destroy', $employee) }}"
-                                        method="POST">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-danger btn-sm" title="Eliminar"><i
-                                                class="fas fa-trash-alt"></i></button>
-                                    </form>
-                                @endcan
+                                {{-- 1. Botón de Editar (Eliminamos el @can) --}}
+                                <a href="{{ route('employees.edit', $employee->id) }}" class="btn btn-info btn-sm"
+                                    title="Editar"><i class="fas fa-pencil-alt"></i></a>
+                                
+                                {{-- 2. Botón de Eliminar (Eliminamos el @can) --}}
+                                <form class="d-inline delete-form" action="{{ route('employees.destroy', $employee) }}"
+                                    method="POST">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger btn-sm" title="Eliminar"><i
+                                            class="fas fa-trash-alt"></i></button>
+                                </form>
                             </td>
                         </tr>
                     @endforeach
