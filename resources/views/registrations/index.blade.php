@@ -35,21 +35,37 @@
                             </td>
                             <td>{{ optional($reg->employee)->name }}</td>
                             <td>
-                                {{ optional($reg->checkindate)->format('Y-m-d') }}
+                                {{-- Usamos checkin_date si existe, o checkindate --}}
+                                {{ \Carbon\Carbon::parse($reg->checkin_date ?? $reg->checkindate)->format('Y-m-d') }}
                                 {{ $reg->checkintime }}
                             </td>
                             <td>
-                                @if($reg->checkoutdate)
-                                    {{ optional($reg->checkoutdate)->format('Y-m-d') }}
+                                {{-- LÓGICA DE SALIDA --}}
+                                {{-- Verificamos si ya tiene fecha de salida (checkout_date) --}}
+                                @if($reg->checkout_date)
+                                    {{ \Carbon\Carbon::parse($reg->checkout_date)->format('Y-m-d') }}
                                     {{ $reg->checkouttime }}
                                 @else
                                     <span class="badge badge-warning">En curso</span>
                                 @endif
                             </td>
                             <td>
+                                {{-- 1. BOTÓN DE CHECKOUT (Solo si está en curso) --}}
+                                @if(!$reg->checkout_date)
+                                    <form action="{{ route('registrations.checkout', $reg->id) }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="btn btn-warning btn-sm" title="Finalizar Estancia / Checkout" onclick="return confirm('¿Confirmar salida del cliente? Se calculará el precio final.')">
+                                            <i class="fas fa-sign-out-alt"></i>
+                                        </button>
+                                    </form>
+                                @endif
+
+                                {{-- 2. BOTÓN DE EDITAR --}}
                                 <a href="{{ route('registrations.edit', $reg) }}" class="btn btn-info btn-sm" title="Editar">
                                     <i class="fas fa-pencil-alt"></i>
                                 </a>
+
+                                {{-- 3. BOTÓN DE ELIMINAR --}}
                                 <form class="d-inline" action="{{ route('registrations.destroy', $reg) }}" method="POST"
                                       onsubmit="return confirm('¿Eliminar registro?');">
                                     @csrf
