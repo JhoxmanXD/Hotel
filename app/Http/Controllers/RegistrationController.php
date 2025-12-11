@@ -74,24 +74,37 @@ class RegistrationController extends Controller
     // Función para cobrar y dar salida
     public function checkout($id)
     {
+        // 1. Buscamos el registro junto con la habitación (para saber el precio)
         $registration = \App\Models\Registration::with('room')->findOrFail($id);
 
-        // CORRECCIÓN: Usamos 'checkoutdate' (sin guion)
-        $checkout = \Carbon\Carbon::now();
-        $registration->checkoutdate = $checkout; // <--- AQUÍ CAMBIÓ
+        // 2. Capturamos el momento exacto de AHORA
+        $now = \Carbon\Carbon::now();
 
-        // Calcular días
-        // CORRECCIÓN: Usamos 'checkindate' si así se llama en tu DB
-        $checkin = \Carbon\Carbon::parse($registration->checkindate); 
+        // 3. Guardamos la FECHA y la HORA de salida
+        // Usamos toDateString() para que guarde solo '2025-12-11'
+        // Usamos toTimeString() para que guarde solo '08:30:00'
+        $registration->checkoutdate = $now->toDateString(); 
+        $registration->checkouttime = $now->toTimeString(); 
+
+        // 4. Calcular cuántos días se quedó
+        $checkin = \Carbon\Carbon::parse($registration->checkindate);
         
-        $days = $checkin->diffInDays($checkout);
-        if ($days == 0) $days = 1;
+        // Calculamos la diferencia en días entre la entrada y hoy
+        $days = $checkin->diffInDays($now);
+        
+        // Si la diferencia es 0 (entró y salió el mismo día), cobramos 1 día
+        if ($days == 0) {
+            $days = 1;
+        }
 
+        // 5. Calcular el Total $$ (Días * Precio de la Habitación)
         $total = $days * $registration->room->price;
         
+        // 6. Guardar los cambios en la base de datos
         $registration->save();
 
-        return redirect()->back()->with('success', 'Checkout exitoso. Total: $' . number_format($total, 0));
+        // 7. Redirigir avisando cuánto cobrar
+        return redirect()->back()->with('success', 'Checkout exitoso. Total a cobrar: $' . number_format($total, 0));
     }
 
     public function calculateTotal($id)
