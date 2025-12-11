@@ -120,25 +120,41 @@ class RegistrationController extends Controller
     // Función para calcular total en la Factura (AJAX)
     public function calculateTotal($id)
     {
-        $registration = Registration::with('room')->findOrFail($id);
+        // 1. Buscamos el registro
+        $registration = \App\Models\Registration::with('room')->findOrFail($id);
         
-        $checkin = Carbon::parse($registration->checkindate);
+        // 2. Calculamos los días (Usando startOfDay para evitar problemas de horas)
+        $checkin = \Carbon\Carbon::parse($registration->checkindate)->startOfDay();
         
-        // Usamos checkoutdate si existe, si no, usamos AHORA
         $checkout = $registration->checkoutdate 
-                    ? Carbon::parse($registration->checkoutdate) 
-                    : Carbon::now();
+                    ? \Carbon\Carbon::parse($registration->checkoutdate)->startOfDay() 
+                    : \Carbon\Carbon::now()->startOfDay();
         
         $days = $checkin->diffInDays($checkout);
         
-        // Mínimo 1 día de cobro
+        // Regla: Cobrar mínimo 1 día
         if ($days == 0) {
             $days = 1;
         }
 
-        $total = $days * $registration->room->price;
+        // 3. OBTENER Y LIMPIAR EL PRECIO (Aquí está el arreglo) 🛠️
+        $rawPrice = $registration->room->price; // Puede venir como "60,000.00"
         
-        return response()->json(['total' => $total]);
+        // Quitamos la coma ',' para que quede como "60000.00"
+        $cleanPrice = str_replace(',', '', $rawPrice);
+        
+        // Aseguramos que sea un número flotante
+        $price = floatval($cleanPrice);
+
+        // 4. Calcular Total
+        $total = $days * $price;
+        
+        return response()->json([
+            'total' => $total,
+            // Enviamos estos datos extra por si quieres verlos en la consola del navegador
+            'debug_dias' => $days,
+            'debug_precio_detectado' => $price
+        ]);
     }
     
 }
