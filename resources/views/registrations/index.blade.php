@@ -35,23 +35,24 @@
                             </td>
                             <td>{{ optional($reg->employee)->name }}</td>
                             <td>
-                                {{-- Usamos checkin_date si existe, o checkindate --}}
-                                {{ \Carbon\Carbon::parse($reg->checkin_date ?? $reg->checkindate)->format('Y-m-d') }}
+                                {{-- CORREGIDO: checkindate (sin guion) --}}
+                                {{ \Carbon\Carbon::parse($reg->checkindate)->format('Y-m-d') }}
                                 {{ $reg->checkintime }}
                             </td>
                             <td>
                                 {{-- LÓGICA DE SALIDA --}}
-                                {{-- Verificamos si ya tiene fecha de salida (checkout_date) --}}
-                                @if($reg->checkout_date)
-                                    {{ \Carbon\Carbon::parse($reg->checkout_date)->format('Y-m-d') }}
+                                {{-- CORREGIDO: checkoutdate (sin guion) --}}
+                                @if($reg->checkoutdate)
+                                    {{ \Carbon\Carbon::parse($reg->checkoutdate)->format('Y-m-d') }}
                                     {{ $reg->checkouttime }}
                                 @else
                                     <span class="badge badge-warning">En curso</span>
                                 @endif
                             </td>
                             <td>
-                                {{-- 1. BOTÓN DE CHECKOUT (Solo si está en curso) --}}
-                                @if(!$reg->checkout_date)
+                                {{-- 1. BOTÓN DE CHECKOUT (Solo si no tiene fecha de salida) --}}
+                                {{-- CORREGIDO: checkoutdate (sin guion) --}}
+                                @if(!$reg->checkoutdate)
                                     <form action="{{ route('registrations.checkout', $reg->id) }}" method="POST" class="d-inline">
                                         @csrf
                                         <button type="submit" class="btn btn-warning btn-sm" title="Finalizar Estancia / Checkout" onclick="return confirm('¿Confirmar salida del cliente? Se calculará el precio final.')">
