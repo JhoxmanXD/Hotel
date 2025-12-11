@@ -29,4 +29,4 @@ RUN composer install --no-dev --optimize-autoloader
 
 # 7. Configurar puerto y arranque
 EXPOSE 10000
-CMD bash -c "php artisan migrate --force && php artisan storage:link && php artisan serve --host=0.0.0.0 --port=10000"
+CMD bash -c "php artisan config:clear && php artisan migrate --force && php artisan storage:link && php artisan serve --host=0.0.0.0 --port=10000"
