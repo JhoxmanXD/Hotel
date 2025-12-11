@@ -23,9 +23,14 @@
         </div>
       </div>
       <li class="nav-item">
-        <a class="nav-link" data-widget="control-sidebar" data-controlsidebar-slide="true" href="#" role="button">
-        <i class='fas fa-power-off' style='font-size:30px;color:red;margin-top:10px;';></i>
+        <a class="nav-link" href="{{ route('logout') }}" role="button" 
+           onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+            <i class='fas fa-power-off' style='font-size:30px;color:red;margin-top:10px;'></i>
         </a>
-      </li>
+    
+        <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+            @csrf
+        </form>
+    </li>
     </ul>
   </nav>
