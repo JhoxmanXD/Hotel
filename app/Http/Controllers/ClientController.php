@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreClientRequest;
+use App\Http\Requests\ClientRequest; // <--- Usamos el Request inteligente que creamos
 use App\Models\Client;
 use Illuminate\Http\Request;
 
@@ -19,11 +19,14 @@ class ClientController extends Controller
         return view('clients.create');
     }
 
-    public function store(StoreClientRequest $request)
+    public function store(ClientRequest $request) // <--- Tipo ClientRequest
     {
         $data = $request->validated();
+        
+        // Asignamos el usuario que registra
         $data['registeredBy'] = auth()->id();
-        $client = Client::create($data);
+        
+        Client::create($data);
 
         return redirect()
             ->route('clients.index')
@@ -32,7 +35,10 @@ class ClientController extends Controller
 
     public function show(Client $client)
     {
-        $client->load('registeredUser');
+        // Asumiendo que la relación se llama 'user' o 'registeredUser' en el modelo Client
+        // Si te da error, verifica el nombre en tu modelo Client.php
+        // $client->load('registeredUser'); 
+        
         return view('clients.show', compact('client'));
     }
 
@@ -41,16 +47,15 @@ class ClientController extends Controller
         return view('clients.edit', compact('client'));
     }
 
-    public function update(StoreClientRequest $request, Client $client)
+    public function update(ClientRequest $request, Client $client) // <--- Tipo ClientRequest
     {
-        // Ajustar reglas únicas para update
-        $rules = $request->rules();
-        $rules['documentNumber'][3] = 'unique:clients,documentNumber,' . $client->id;
-        $rules['email'][2] = 'unique:clients,email,' . $client->id;
+        // ¡MIRA QUÉ LIMPIO! 
+        // Ya no necesitas modificar las reglas aquí manualmente.
+        // El ClientRequest ya sabe que debe ignorar el ID de este $client.
+        
+        $data = $request->validated();
 
-        $validated = $request->validate($rules);
-
-        $client->update($validated);
+        $client->update($data);
 
         return redirect()
             ->route('clients.index')
@@ -60,6 +65,7 @@ class ClientController extends Controller
     public function destroy(Client $client)
     {
         $client->delete();
+        
         return redirect()
             ->route('clients.index')
             ->with('success','Cliente eliminado.');
