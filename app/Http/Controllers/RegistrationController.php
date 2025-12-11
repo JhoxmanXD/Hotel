@@ -87,34 +87,31 @@ class RegistrationController extends Controller
     // Función para cobrar y dar salida (Checkout)
     public function checkout($id)
     {
-        // 1. Buscamos el registro junto con la habitación
+        // 1. Buscamos el registro
         $registration = Registration::with('room')->findOrFail($id);
 
-        // 2. Capturamos el momento exacto de AHORA
+        // 2. Capturamos el momento actual
         $now = Carbon::now();
 
-        // 3. Guardamos la FECHA y la HORA de salida
+        // 3. Guardamos fecha y hora de salida
         $registration->checkoutdate = $now->toDateString(); 
         $registration->checkouttime = $now->toTimeString(); 
 
-        // 4. Cambiamos el estado a Inactivo (0) para cerrar el ciclo
-        // Asumiendo que en tu tabla tienes una columna 'state' o 'status'
-        $registration->state = '0'; 
+        // ❌ ELIMINAMOS ESTA LÍNEA (Causaba el error)
+        // $registration->state = '0'; 
 
-        // 5. Calcular cuántos días se quedó
+        // 4. Calcular días
         $checkin = Carbon::parse($registration->checkindate);
-        
         $days = $checkin->diffInDays($now);
         
-        // Si la diferencia es 0 (entró y salió el mismo día), cobramos 1 día
         if ($days == 0) {
             $days = 1;
         }
 
-        // 6. Calcular el Total
+        // 5. Calcular Total
         $total = $days * $registration->room->price;
         
-        // 7. Guardar cambios
+        // 6. Guardar (Ahora sí funcionará)
         $registration->save();
 
         return redirect()->back()->with('success', 'Checkout exitoso. Total a cobrar: $' . number_format($total, 0));
