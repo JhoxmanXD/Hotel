@@ -76,31 +76,32 @@ class RegistrationController extends Controller
     {
         $registration = \App\Models\Registration::with('room')->findOrFail($id);
 
-        // 1. Marcar salida hoy
+        // CORRECCIÓN: Usamos 'checkoutdate' (sin guion)
         $checkout = \Carbon\Carbon::now();
-        $registration->checkout_date = $checkout;
+        $registration->checkoutdate = $checkout; // <--- AQUÍ CAMBIÓ
 
-        // 2. Calcular días
-        $checkin = \Carbon\Carbon::parse($registration->checkin_date);
+        // Calcular días
+        // CORRECCIÓN: Usamos 'checkindate' si así se llama en tu DB
+        $checkin = \Carbon\Carbon::parse($registration->checkindate); 
+        
         $days = $checkin->diffInDays($checkout);
-        if ($days == 0) $days = 1; // Cobrar mínimo 1 día
+        if ($days == 0) $days = 1;
 
-        // 3. Calcular Total
         $total = $days * $registration->room->price;
         
-        // Guardamos
         $registration->save();
 
-        return redirect()->back()->with('success', 'Checkout exitoso. Total a cobrar: $' . number_format($total, 0));
+        return redirect()->back()->with('success', 'Checkout exitoso. Total: $' . number_format($total, 0));
     }
 
-    // Función para la factura (Invoice)
     public function calculateTotal($id)
     {
         $registration = \App\Models\Registration::with('room')->findOrFail($id);
         
-        $checkin = \Carbon\Carbon::parse($registration->checkin_date);
-        $checkout = $registration->checkout_date ? \Carbon\Carbon::parse($registration->checkout_date) : \Carbon\Carbon::now();
+        $checkin = \Carbon\Carbon::parse($registration->checkindate);
+        
+        // CORRECCIÓN: 'checkoutdate'
+        $checkout = $registration->checkoutdate ? \Carbon\Carbon::parse($registration->checkoutdate) : \Carbon\Carbon::now();
         
         $days = $checkin->diffInDays($checkout) ?: 1;
         $total = $days * $registration->room->price;
